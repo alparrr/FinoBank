@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "8FkojhDdlOxgBPAq7LCqPrbYouyesQx9RvjMuupEWJk=",
+  "Source": "FinoBankApi",
+  "BasePath": "_content/FinoBankApi",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}
