@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using FinoBankApi.Models;
 
-namespace BankingApp.Data
+namespace FinoBankApi.Data
 {
     public class BankingDbContext : DbContext
     {
