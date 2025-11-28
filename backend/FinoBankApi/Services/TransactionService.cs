@@ -20,36 +20,83 @@ namespace FinoBankApi.Services
 
             try
             {
-                var fromAccount = await _context.Accounts
-                    .FirstOrDefaultAsync(a => a.Id == createTransactionDto.FromAccountId && a.UserId == userId);
-
-                if (fromAccount == null)
+                if (createTransactionDto.FromAccountId == 0)
                 {
-                    throw new Exception("Source account not found");
+                    var dest = await _context.Accounts
+                        .FirstOrDefaultAsync(a => a.AccountNumber == createTransactionDto.ToAccountNumber && a.UserId == userId);
+
+                    if (dest == null)
+                        throw new Exception("Destination account not found");
+
+                    if (createTransactionDto.Amount <= 0)
+                        throw new Exception("Amount must be greater than zero");
+
+                    dest.Balance += createTransactionDto.Amount;
+
+                    var deposit = new Transaction
+                    {
+                        FromAccountId = null, 
+                        ToAccountId = dest.Id,
+                        Amount = createTransactionDto.Amount,
+                        Currency = dest.Currency,
+                        Title = createTransactionDto.Title,
+                        Description = createTransactionDto.Description,
+                        Status = "Completed",
+                        TransactionType = "Deposit"
+                    };
+
+                    _context.Transactions.Add(deposit);
+                    await _context.SaveChangesAsync();
+                    await dbTransaction.CommitAsync();
+
+                    return new TransactionDto
+                    {
+                        Id = deposit.Id,
+                        FromAccountId = deposit.FromAccountId,
+                        FromAccountNumber = "EXTERNAL",
+                        ToAccountId = deposit.ToAccountId,
+                        ToAccountNumber = dest.AccountNumber,
+                        Amount = deposit.Amount,
+                        Currency = deposit.Currency,
+                        Title = deposit.Title,
+                        Description = deposit.Description,
+                        CreatedAt = deposit.CreatedAt,
+                        Status = deposit.Status,
+                        TransactionType = deposit.TransactionType
+                    };
                 }
 
-                var toAccount = await _context.Accounts
-                    .FirstOrDefaultAsync(a => a.AccountNumber == createTransactionDto.ToAccountNumber);
+                //transfer between accounts
+                var from = await _context.Accounts
+            .FirstOrDefaultAsync(a => a.Id == createTransactionDto.FromAccountId && a.UserId == userId);
 
-                if (toAccount == null)
-                {
-                    throw new Exception("Destination account not found");
-                }
+            if (from == null)
+                throw new Exception("Source account not found");
 
-                if (fromAccount.Balance < createTransactionDto.Amount)
-                {
-                    throw new Exception("Insufficient funds");
-                }
+            var dest2 = await _context.Accounts
+                .FirstOrDefaultAsync(a => a.AccountNumber == createTransactionDto.ToAccountNumber);
 
-                fromAccount.Balance -= createTransactionDto.Amount;
-                toAccount.Balance += createTransactionDto.Amount;
+            if (dest2 == null)
+                throw new Exception("Destination account not found");
+
+            if (createTransactionDto.Amount <= 0)
+                throw new Exception("Amount must be greater than zero");
+
+            if (from.Currency != dest2.Currency)
+                throw new Exception("Currency mismatch");
+
+            if (from.Balance < createTransactionDto.Amount)
+                throw new Exception("Insufficient funds");
+
+            from.Balance -= createTransactionDto.Amount;
+            dest2.Balance += createTransactionDto.Amount;
 
                 var transaction = new Transaction
                 {
-                    FromAccountId = fromAccount.Id,
-                    ToAccountId = toAccount.Id,
+                    FromAccountId = from.Id,
+                    ToAccountId = dest2.Id,
                     Amount = createTransactionDto.Amount,
-                    Currency = fromAccount.Currency,
+                    Currency = from.Currency,
                     Title = createTransactionDto.Title,
                     Description = createTransactionDto.Description,
                     Status = "Completed",
@@ -64,9 +111,9 @@ namespace FinoBankApi.Services
                 {
                     Id = transaction.Id,
                     FromAccountId = transaction.FromAccountId,
-                    FromAccountNumber = fromAccount.AccountNumber,
+                    FromAccountNumber = from.AccountNumber,
                     ToAccountId = transaction.ToAccountId,
-                    ToAccountNumber = toAccount.AccountNumber,
+                    ToAccountNumber = dest2.AccountNumber,
                     Amount = transaction.Amount,
                     Currency = transaction.Currency,
                     Title = transaction.Title,
@@ -102,7 +149,7 @@ namespace FinoBankApi.Services
                 {
                     Id = t.Id,
                     FromAccountId = t.FromAccountId,
-                    FromAccountNumber = t.FromAccount.AccountNumber,
+                    FromAccountNumber = t.FromAccount != null ? t.FromAccount.AccountNumber : "EXTERNAL",
                     ToAccountId = t.ToAccountId,
                     ToAccountNumber = t.ToAccount.AccountNumber,
                     Amount = t.Amount,
@@ -128,13 +175,14 @@ namespace FinoBankApi.Services
             var transactions = await _context.Transactions
                 .Include(t => t.FromAccount)
                 .Include(t => t.ToAccount)
-                .Where(t => userAccountIds.Contains(t.FromAccountId) || userAccountIds.Contains(t.ToAccountId))
+                .Where(t => (t.FromAccountId.HasValue && userAccountIds.Contains(t.FromAccountId.Value)) 
+                 || userAccountIds.Contains(t.ToAccountId))
                 .OrderByDescending(t => t.CreatedAt)
                 .Select(t => new TransactionDto
                 {
                     Id = t.Id,
                     FromAccountId = t.FromAccountId,
-                    FromAccountNumber = t.FromAccount.AccountNumber,
+                    FromAccountNumber = t.FromAccount != null ? t.FromAccount.AccountNumber : "EXTERNAL",
                     ToAccountId = t.ToAccountId,
                     ToAccountNumber = t.ToAccount.AccountNumber,
                     Amount = t.Amount,

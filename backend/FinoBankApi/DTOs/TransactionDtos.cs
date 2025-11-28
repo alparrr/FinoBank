@@ -23,7 +23,7 @@ namespace FinoBankApi.DTOs
     public class TransactionDto
     {
         public int Id { get; set; }
-        public int FromAccountId { get; set; }
+        public int? FromAccountId { get; set; }
         public string FromAccountNumber { get; set; }
         public int ToAccountId { get; set; }
         public string ToAccountNumber { get; set; }

@@ -9,7 +9,7 @@ namespace FinoBankApi.Models
         public int Id { get; set; }
         
         [ForeignKey("FromAccount")]
-        public int FromAccountId { get; set; }
+        public int? FromAccountId { get; set; }
         public Account FromAccount { get; set; }
         
         [ForeignKey("ToAccount")]
@@ -39,5 +39,6 @@ namespace FinoBankApi.Models
         [Required]
         [MaxLength(50)]
         public string TransactionType { get; set; }
+
     }
 }
