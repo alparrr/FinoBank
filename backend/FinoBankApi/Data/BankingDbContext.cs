@@ -12,21 +12,31 @@ namespace FinoBankApi.Data
         public DbSet<User> Users { get; set; }
         public DbSet<Account> Accounts { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
+        public DbSet<SecurityLog> SecurityLogs { get; set; } 
+        public DbSet<Contact> Contacts { get; set; } 
+        public DbSet<Card> Cards { get; set; }
+        public DbSet<PhoneVerification> PhoneVerifications { get; set; } 
+        public DbSet<CurrencyRate> CurrencyRates { get; set; }
+        
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // User configuration
+            // User 
             modelBuilder.Entity<User>()
                 .HasIndex(u => u.Email)
                 .IsUnique();
-
+                
             modelBuilder.Entity<User>()
                 .HasIndex(u => u.Pesel)
                 .IsUnique();
 
-            // Account configuration
+            modelBuilder.Entity<User>()
+                .HasIndex(u => u.PhoneNumber) 
+                .IsUnique();
+
+            // Account 
             modelBuilder.Entity<Account>()
                 .HasIndex(a => a.AccountNumber)
                 .IsUnique();
@@ -37,7 +47,7 @@ namespace FinoBankApi.Data
                 .HasForeignKey(a => a.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Transaction configuration
+            // Transaction 
             modelBuilder.Entity<Transaction>()
                 .HasOne(t => t.FromAccount)
                 .WithMany(a => a.SentTransactions)
@@ -49,6 +59,16 @@ namespace FinoBankApi.Data
                 .WithMany(a => a.ReceivedTransactions)
                 .HasForeignKey(t => t.ToAccountId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Card>()
+                .HasIndex(c => c.CardNumber)
+                .IsUnique();
+
+            modelBuilder.Entity<Card>()
+                .HasOne(c => c.Account) 
+                .WithMany(a => a.Cards)
+                .HasForeignKey(c => c.AccountId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

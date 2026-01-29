@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using FinoBankApi.Data;
 using FinoBankApi.DTOs;
 using FinoBankApi.Models;
+using FinoBankApi.Helpers;
 
 namespace FinoBankApi.Services
 {
@@ -61,7 +62,7 @@ namespace FinoBankApi.Services
         {
             var account = new Account
             {
-                AccountNumber = GenerateAccountNumber(),
+                AccountNumber = AccountNumberGenerator.Generate(),
                 Balance = 0,
                 Currency = createAccountDto.Currency,
                 AccountType = createAccountDto.AccountType,
@@ -94,17 +95,6 @@ namespace FinoBankApi.Services
             }
 
             return account.Balance;
-        }
-
-        private string GenerateAccountNumber()
-        {
-            var random = new Random();
-            var accountNumber = "PL";
-            for (int i = 0; i < 24; i++)
-            {
-                accountNumber += random.Next(0, 10);
-            }
-            return accountNumber;
         }
     }
 }

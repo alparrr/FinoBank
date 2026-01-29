@@ -9,7 +9,7 @@ namespace FinoBankApi.Models
         public int Id { get; set; }
         
         [Required]
-        [MaxLength(26)]
+        [MaxLength(28)]
         public string AccountNumber { get; set; }
         
         [Required]
@@ -32,6 +32,10 @@ namespace FinoBankApi.Models
         public int UserId { get; set; }
         public User User { get; set; }
         
+        [Timestamp]
+        public DateTime RowVersion { get; set; } 
+        public ICollection<Card> Cards { get; set; }
+
         public ICollection<Transaction> SentTransactions { get; set; }
         public ICollection<Transaction> ReceivedTransactions { get; set; }
     }

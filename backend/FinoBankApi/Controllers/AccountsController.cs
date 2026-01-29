@@ -26,61 +26,33 @@ namespace FinoBankApi.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAccounts()
         {
-            try
-            {
-                var userId = GetUserId();
-                var accounts = await _accountService.GetUserAccounts(userId);
-                return Ok(accounts);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var userId = GetUserId();
+            var accounts = await _accountService.GetUserAccounts(userId);
+            return Ok(accounts);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetAccount(int id)
         {
-            try
-            {
-                var userId = GetUserId();
-                var account = await _accountService.GetAccountById(id, userId);
-                return Ok(account);
-            }
-            catch (Exception ex)
-            {
-                return NotFound(new { message = ex.Message });
-            }
+            var userId = GetUserId();
+            var account = await _accountService.GetAccountById(id, userId);
+            return Ok(account);
         }
 
         [HttpPost]
         public async Task<IActionResult> CreateAccount([FromBody] CreateAccountDto createAccountDto)
         {
-            try
-            {
-                var userId = GetUserId();
-                var account = await _accountService.CreateAccount(createAccountDto, userId);
-                return CreatedAtAction(nameof(GetAccount), new { id = account.Id }, account);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var userId = GetUserId();
+            var account = await _accountService.CreateAccount(createAccountDto, userId);
+            return CreatedAtAction(nameof(GetAccount), new { id = account.Id }, account);
         }
 
         [HttpGet("{id}/balance")]
         public async Task<IActionResult> GetBalance(int id)
         {
-            try
-            {
-                var userId = GetUserId();
-                var balance = await _accountService.GetAccountBalance(id, userId);
-                return Ok(new { balance });
-            }
-            catch (Exception ex)
-            {
-                return NotFound(new { message = ex.Message });
-            }
+            var userId = GetUserId();
+            var balance = await _accountService.GetAccountBalance(id, userId);
+            return Ok(new { balance });
         }
     }
 }

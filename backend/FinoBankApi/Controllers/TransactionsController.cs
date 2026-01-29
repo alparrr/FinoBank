@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using FinoBankApi.DTOs;
 using FinoBankApi.Services;
+using Microsoft.EntityFrameworkCore;
+using FinoBankApi.Data;
 
 namespace FinoBankApi.Controllers
 {
@@ -12,60 +14,54 @@ namespace FinoBankApi.Controllers
     public class TransactionsController : ControllerBase
     {
         private readonly ITransactionService _transactionService;
+        private readonly PdfService _pdfService;
 
-        public TransactionsController(ITransactionService transactionService)
+        // Wstrzykujemy PdfService przez konstruktor
+        public TransactionsController(ITransactionService transactionService, PdfService pdfService)
         {
             _transactionService = transactionService;
+            _pdfService = pdfService;
         }
 
-        private int GetUserId()
-        {
-            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-        }
+        private int GetUserId() => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
         [HttpPost]
         public async Task<IActionResult> CreateTransaction([FromBody] CreateTransactionDto createTransactionDto)
         {
-            try
-            {
-                var userId = GetUserId();
-                var transaction = await _transactionService.CreateTransaction(createTransactionDto, userId);
-                return Ok(transaction);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var transaction = await _transactionService.CreateTransaction(createTransactionDto, GetUserId());
+            return Ok(transaction);
         }
 
         [HttpGet("account/{accountId}")]
         public async Task<IActionResult> GetAccountTransactions(int accountId)
         {
-            try
-            {
-                var userId = GetUserId();
-                var transactions = await _transactionService.GetAccountTransactions(accountId, userId);
-                return Ok(transactions);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var transactions = await _transactionService.GetAccountTransactions(accountId, GetUserId());
+            return Ok(transactions);
         }
 
         [HttpGet]
         public async Task<IActionResult> GetUserTransactions()
         {
-            try
-            {
-                var userId = GetUserId();
-                var transactions = await _transactionService.GetUserTransactions(userId);
-                return Ok(transactions);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var transactions = await _transactionService.GetUserTransactions(GetUserId());
+            return Ok(transactions);
+        }
+
+        [HttpGet("{id}/pdf")]
+        public async Task<IActionResult> GetPdf(int id)
+        {
+            var t = await _transactionService.GetTransactionById(id, GetUserId());
+
+            if (t == null) return NotFound(new { message = "Nie znaleziono transakcji lub brak dostępu." });
+
+            var fileBytes = _pdfService.GenerateTransactionPdf(
+                t.Title, 
+                t.Amount, 
+                t.CreatedAt.ToString("dd.MM.yyyy HH:mm"), 
+                t.FromAccountNumber, 
+                t.ToAccountNumber
+            );
+
+            return File(fileBytes, "application/pdf", $"potwierdzenie_{id}.pdf");
         }
     }
 }

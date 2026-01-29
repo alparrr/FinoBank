@@ -7,5 +7,6 @@ namespace FinoBankApi.Services
         Task<TransactionDto> CreateTransaction(CreateTransactionDto createTransactionDto, int userId);
         Task<List<TransactionDto>> GetAccountTransactions(int accountId, int userId);
         Task<List<TransactionDto>> GetUserTransactions(int userId);
+        Task<TransactionDto> GetTransactionById(int transactionId, int userId);
     }
 }

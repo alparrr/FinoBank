@@ -5,8 +5,13 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using QuestPDF.Infrastructure;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
+
+QuestPDF.Settings.License = LicenseType.Community;
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -44,7 +49,8 @@ builder.Services.AddDbContext<BankingDbContext>(options =>
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var secretKey = jwtSettings["SecretKey"];
+
+var secretKey = jwtSettings["SecretKey"]; 
 
 builder.Services.AddAuthentication(options =>
 {
@@ -61,7 +67,21 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey))
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+        ClockSkew = TimeSpan.Zero 
+    };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var token = context.Request.Cookies["jwt"];
+            if (!string.IsNullOrEmpty(token))
+            {
+                context.Token = token;
+            }
+            return Task.CompletedTask;
+        }
     };
 });
 
@@ -69,15 +89,28 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
+builder.Services.AddScoped<ISecurityLogService, SecurityLogService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<FinoBankApi.Services.PdfService>();
+builder.Services.AddScoped<ICardService, CardService>();
+builder.Services.AddScoped<ISmsService, SmsService>();
+builder.Services.AddHttpClient<IExchangeService, ExchangeService>();
+builder.Services.AddScoped<FinoBankApi.Helpers.EncryptionHelper>();
 
-builder.Services.AddCors(options =>
+
+builder.Services.AddRateLimiter(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
-    {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddPolicy("LoginPolicy", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1), 
+                QueueLimit = 0
+            }));
 });
 
 var app = builder.Build();
@@ -88,8 +121,25 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+else
+{
+    app.UseHsts();
+}
 
-app.UseCors("AllowAll");
+app.UseMiddleware<FinoBankApi.Middleware.ErrorHandlingMiddleware>();
+app.UseMiddleware<FinoBankApi.Middleware.SecurityHeadersMiddleware>();
+
+app.UseHttpsRedirection(); 
+
+
+app.UseCors(policy => 
+    policy.WithOrigins("http://localhost:3000") 
+          .AllowAnyMethod()
+          .AllowAnyHeader()
+          .AllowCredentials());
+
+app.UseRateLimiter();
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
