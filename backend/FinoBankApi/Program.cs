@@ -96,6 +96,7 @@ builder.Services.AddScoped<ICardService, CardService>();
 builder.Services.AddScoped<ISmsService, SmsService>();
 builder.Services.AddHttpClient<IExchangeService, ExchangeService>();
 builder.Services.AddScoped<FinoBankApi.Helpers.EncryptionHelper>();
+builder.Services.AddScoped<ITransactionSeederService, TransactionSeederService>();
 
 
 builder.Services.AddRateLimiter(options =>
@@ -129,11 +130,11 @@ else
 app.UseMiddleware<FinoBankApi.Middleware.ErrorHandlingMiddleware>();
 app.UseMiddleware<FinoBankApi.Middleware.SecurityHeadersMiddleware>();
 
-app.UseHttpsRedirection(); 
+//app.UseHttpsRedirection(); 
 
 
 app.UseCors(policy => 
-    policy.WithOrigins("http://localhost:3000") 
+    policy.WithOrigins("http://localhost:5173") 
           .AllowAnyMethod()
           .AllowAnyHeader()
           .AllowCredentials());

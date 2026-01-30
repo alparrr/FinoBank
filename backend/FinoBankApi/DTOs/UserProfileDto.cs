@@ -13,5 +13,6 @@ namespace FinoBankApi.DTOs
         public string ZipCode { get; set; } 
         public DateTime CreatedAt { get; set; }
         public bool Is2faEnabled { get; set; } 
+        public string Role { get; set; }
     }
 }

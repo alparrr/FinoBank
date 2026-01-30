@@ -28,10 +28,14 @@ namespace FinoBankApi.Controllers
         }
 
         [HttpPost("create/{accountId}")]
-        public async Task<IActionResult> CreateCard(int accountId)
+        public async Task<IActionResult> CreateCard(int accountId, [FromBody] CreateCardRequest request)
         {
-            await _cardService.CreateCardForAccount(accountId, GetUserId());
+            await _cardService.CreateCardForAccount(accountId, GetUserId(), request.Pin);
             return Ok(new { message = "Card ordered successfully" });
+        }
+        public class CreateCardRequest
+        {
+            public string Pin { get; set; }
         }
 
         [HttpPost("{cardId}/limits")]

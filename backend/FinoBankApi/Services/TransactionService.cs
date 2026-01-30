@@ -106,7 +106,7 @@ namespace FinoBankApi.Services
                 .Include(t => t.ToAccount)
                 .Where(t => t.FromAccountId == accountId || t.ToAccountId == accountId)
                 .OrderByDescending(t => t.CreatedAt)
-                .Take(20)
+                .Take(200)
                 .Select(t => new TransactionDto
                 {
                     Id = t.Id,

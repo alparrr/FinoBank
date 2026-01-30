@@ -15,13 +15,16 @@ namespace FinoBankApi.Services
             _context = context;
         }
 
-        public async Task<Card> CreateCardForAccount(int accountId, int userId)
+        public async Task<Card> CreateCardForAccount(int accountId, int userId, string pin) // <--- Dodano parametr pin
         {
             var account = await _context.Accounts.FirstOrDefaultAsync(a => a.Id == accountId && a.UserId == userId);
             if (account == null) throw new Exception("Account not found");
 
             if (await _context.Cards.AnyAsync(c => c.AccountId == accountId))
                 throw new Exception("Card already exists for this account");
+            
+            if (string.IsNullOrEmpty(pin) || pin.Length != 4 || !pin.All(char.IsDigit))
+                throw new Exception("PIN must be exactly 4 digits.");
 
             var random = new Random();
             var card = new Card
@@ -29,7 +32,7 @@ namespace FinoBankApi.Services
                 AccountId = accountId,
                 CardNumber = "4" + GenerateRandomDigits(15),
                 CVV = GenerateRandomDigits(3),
-                PIN = GenerateRandomDigits(4),
+                PIN = BCrypt.Net.BCrypt.HashPassword(pin),
                 ExpiryDate = DateTime.UtcNow.AddYears(3),
                 IsActive = true,
                 IsBlocked = false,
@@ -50,7 +53,7 @@ namespace FinoBankApi.Services
                 .Select(c => new CardDto
                 {
                     Id = c.Id,
-                    CardNumber = "**** **** **** " + c.CardNumber.Substring(12), // Maskowanie!
+                    CardNumber = c.CardNumber,
                     ExpiryDate = c.ExpiryDate.ToString("MM/yy"),
                     IsBlocked = c.IsBlocked,
                     DailyLimit = c.DailyLimit,

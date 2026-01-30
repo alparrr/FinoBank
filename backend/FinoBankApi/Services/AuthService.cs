@@ -286,7 +286,8 @@ namespace FinoBankApi.Services
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
-                CreatedAt = user.CreatedAt
+                CreatedAt = user.CreatedAt,
+                Role = user.Role
             };
         }
 
@@ -307,7 +308,8 @@ namespace FinoBankApi.Services
                 Street = _encryptionHelper.Decrypt(user.Street),
                 ZipCode = _encryptionHelper.Decrypt(user.ZipCode),
                 CreatedAt = user.CreatedAt,
-                Is2faEnabled = !string.IsNullOrEmpty(user.TwoFactorSecret)
+                Is2faEnabled = !string.IsNullOrEmpty(user.TwoFactorSecret),
+                Role = user.Role
             };
         }
 
@@ -316,9 +318,9 @@ namespace FinoBankApi.Services
             var user = await _context.Users.FindAsync(userId);
             if (user == null) throw new Exception("User not found");
 
-            user.City = dto.City;
-            user.Street = dto.Street;
-            user.ZipCode = dto.ZipCode;
+            user.City = _encryptionHelper.Encrypt(dto.City);
+            user.Street = _encryptionHelper.Encrypt(dto.Street);
+            user.ZipCode = _encryptionHelper.Encrypt(dto.ZipCode);
 
             await _context.SaveChangesAsync();
 
