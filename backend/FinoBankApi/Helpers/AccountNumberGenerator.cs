@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Text;
 
+
 namespace FinoBankApi.Helpers
 {
     public static class AccountNumberGenerator

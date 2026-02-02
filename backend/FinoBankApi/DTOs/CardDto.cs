@@ -11,8 +11,6 @@ namespace FinoBankApi.DTOs
         public decimal DailyLimit { get; set; }
         public decimal MonthlyLimit { get; set; }
         public string AccountCurrency { get; set; }
-        
-        public string CVV { get; set; } 
         public string PIN { get; set; }
     }
 

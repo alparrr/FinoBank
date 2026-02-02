@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axiosClient from "../api/axios";
 import Navbar from "../components/Navbar";
+import toast from "react-hot-toast";
 
 const Cards = () => {
   const [cards, setCards] = useState([]);
@@ -41,18 +42,18 @@ const Cards = () => {
     e.preventDefault();
     
     if (!/^\d{4}$/.test(newCardForm.pin)) {
-        alert("PIN musi składać się dokładnie z 4 cyfr!");
+        toast.error("PIN musi składać się dokładnie z 4 cyfr!");
         return;
     }
 
     try {
         await axiosClient.post(`/cards/create/${newCardForm.accountId}`, { pin: newCardForm.pin });
-        alert("Karta zamówiona pomyślnie!");
+        toast.success("Karta zamówiona pomyślnie!");
         setIsModalOpen(false);
         setNewCardForm({ ...newCardForm, pin: "" }); 
         fetchData();
     } catch(err) {
-        alert("Błąd zamawiania karty: " + (err.response?.data?.message || err.message));
+        toast.error("Błąd zamawiania karty: " + (err.response?.data?.message || err.message));
     }
   };
 
@@ -60,10 +61,10 @@ const Cards = () => {
     if (!window.confirm("Czy na pewno chcesz zablokować tę kartę?")) return;
     try {
       await axiosClient.post(`/cards/${cardId}/block`);
-      alert("Karta zablokowana.");
+      toast.success("Karta zablokowana.");
       fetchData();
     } catch (error) {
-      alert("Błąd blokowania.");
+      toast.error("Błąd blokowania.");
     }
   };
 
@@ -78,10 +79,10 @@ const Cards = () => {
         dailyLimit: Number(newDaily),
         monthlyLimit: Number(newMonthly)
       });
-      alert("Limity zaktualizowane.");
+      toast.success("Limity zaktualizowane.");
       fetchData();
     } catch (error) {
-      alert("Błąd aktualizacji.");
+      toast.error("Błąd aktualizacji.");
     }
   };
 
@@ -126,17 +127,17 @@ const Cards = () => {
                       <span className="text-[10px] border border-gray-400 px-1 rounded opacity-80">DEBIT</span>
                     </div>
                     <div className="space-y-1 z-10">
-                       <div className="flex gap-2 items-center">
-                           <div className="w-10 h-8 bg-yellow-500 rounded-md opacity-90 shadow-inner overflow-hidden relative">
+                        <div className="flex gap-2 items-center">
+                            <div className="w-10 h-8 bg-yellow-500 rounded-md opacity-90 shadow-inner overflow-hidden relative">
                                 <div className="absolute border border-yellow-700 w-full h-1 top-2"></div>
                                 <div className="absolute border border-yellow-700 w-full h-1 bottom-2"></div>
                                 <div className="absolute border border-yellow-700 h-full w-1 left-3"></div>
                            </div>
                            <span className="text-xl opacity-60">)))</span>
-                       </div>
-                       <div className="font-mono text-xl tracking-widest drop-shadow-md mt-2 h-8 flex items-center">
+                        </div>
+                        <div className="font-mono text-xl tracking-widest drop-shadow-md mt-2 h-8 flex items-center">
                           {formatCardNumber(card.cardNumber, isRevealed)}
-                       </div>
+                        </div>
                     </div>
                     <div className="flex justify-between text-xs opacity-80 uppercase z-10">
                       <div>
@@ -151,7 +152,7 @@ const Cards = () => {
                     <div className="absolute right-[-20px] bottom-[-20px] text-9xl opacity-5 font-bold select-none pointer-events-none">BANK</div>
                     {card.isBlocked && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60 z-20 backdrop-blur-[2px]">
-                         <div className="border-4 border-red-500 text-red-500 font-bold text-2xl px-4 py-2 rounded-lg -rotate-12">ZABLOKOWANA</div>
+                          <div className="border-4 border-red-500 text-red-500 font-bold text-2xl px-4 py-2 rounded-lg -rotate-12">ZABLOKOWANA</div>
                       </div>
                     )}
                   </div>
@@ -164,7 +165,7 @@ const Cards = () => {
                                 onClick={() => setRevealedCardId(isRevealed ? null : card.id)}
                                 className="text-blue-600 hover:bg-blue-50 p-2 rounded-full transition"
                               >
-                                {isRevealed ? "👁️‍🗨️ Ukryj" : "👁️ Pokaż"}
+                                {isRevealed ? "Ukryj" : "Pokaż"}
                               </button>
                           </div>
                           <div className="grid grid-cols-2 gap-4">
@@ -212,9 +213,15 @@ const Cards = () => {
                         <input 
                             type="password"
                             maxLength={4}
+                            pattern="\d{4}"
                             className="w-full border p-2 rounded mt-1 text-center tracking-widest text-lg"
                             value={newCardForm.pin}
-                            onChange={e => setNewCardForm({...newCardForm, pin: e.target.value})}
+                            onChange={e => {
+                                const value = e.target.value;
+                                if (/^\d*$/.test(value)) {
+                                    setNewCardForm({...newCardForm, pin: value})
+                                }
+                            }}
                             placeholder="****"
                             required
                         />

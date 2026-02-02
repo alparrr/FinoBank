@@ -8,6 +8,7 @@ using FinoBankApi.Data;
 using FinoBankApi.DTOs;
 using FinoBankApi.Models;
 using FinoBankApi.Helpers;
+using OtpNet;
 
 namespace FinoBankApi.Services
 {
@@ -47,8 +48,8 @@ namespace FinoBankApi.Services
             if (verification == null) 
                 throw new Exception("No verification code found. Please request a code first.");
             
-            if (verification.Code != registerDto.SmsCode) 
-                throw new Exception("Invalid SMS code.");
+            if (!BCrypt.Net.BCrypt.Verify(registerDto.SmsCode, verification.Code))
+            throw new Exception("Invalid SMS code.");
             
             if (verification.ExpiryDate < DateTime.UtcNow) 
                 throw new Exception("SMS code expired.");
@@ -156,7 +157,10 @@ namespace FinoBankApi.Services
         public Setup2faDto GenerateTwoFactorSetup(string email)
         {
             var tfa = new TwoFactorAuthenticator();
-            var secretKey = Guid.NewGuid().ToString().Replace("-", "").Substring(0, 10);
+            
+            var key = OtpNet.KeyGeneration.GenerateRandomKey(20);
+            var secretKey = OtpNet.Base32Encoding.ToString(key);
+            
             var setupInfo = tfa.GenerateSetupCode("FinoBank", email, secretKey, false, 3);
 
             return new Setup2faDto
@@ -166,6 +170,7 @@ namespace FinoBankApi.Services
                 ManualEntryKey = setupInfo.ManualEntryKey
             };
         }
+
 
         public async Task EnableTwoFactor(int userId, string secretKey, string code)
         {
@@ -184,14 +189,17 @@ namespace FinoBankApi.Services
         }
         public async Task SendPhoneVerificationCode(string phoneNumber)
         {
-            var random = new Random();
-            var code = random.Next(100000, 999999).ToString();
+            if (await _context.Users.AnyAsync(u => u.PhoneNumber == phoneNumber))
+            {
+                throw new Exception("This phone number is already in use.");
+            }
+            var code = GenerateSecureCode(6);
 
             var verification = new PhoneVerification
             {
                 PhoneNumber = phoneNumber,
-                Code = code,
-                ExpiryDate = DateTime.UtcNow.AddMinutes(5), 
+                Code = BCrypt.Net.BCrypt.HashPassword(code),
+                ExpiryDate = DateTime.UtcNow.AddMinutes(5),
                 IsUsed = false
             };
 
@@ -203,8 +211,6 @@ namespace FinoBankApi.Services
 
         public async Task ChangePhoneNumber(int userId, string newPhoneNumber, string code)
         {
-            if (await _context.Users.AnyAsync(u => u.PhoneNumber == newPhoneNumber))
-                throw new Exception("This phone number is already in use.");
 
             var verification = await _context.PhoneVerifications
                 .Where(v => v.PhoneNumber == newPhoneNumber && !v.IsUsed)
@@ -212,7 +218,7 @@ namespace FinoBankApi.Services
                 .FirstOrDefaultAsync();
 
             if (verification == null) throw new Exception("No verification code found. Request a new one.");
-            if (verification.Code != code) throw new Exception("Invalid SMS code.");
+            if (!BCrypt.Net.BCrypt.Verify(code, verification.Code)) throw new Exception("Invalid SMS code.");
             if (verification.ExpiryDate < DateTime.UtcNow) throw new Exception("SMS code expired.");
 
             var user = await _context.Users.FindAsync(userId);
@@ -278,6 +284,84 @@ namespace FinoBankApi.Services
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
+
+
+        public async Task<AuthResponseDto> RefreshTokenFromCookie(string token)
+        {
+            try
+            {
+                var tokenHandler = new JwtSecurityTokenHandler();
+                var jwtSettings = _configuration.GetSection("JwtSettings");
+                var secretKey = jwtSettings["SecretKey"];
+                var key = Encoding.UTF8.GetBytes(secretKey);
+
+                var validationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    ValidateIssuer = true,
+                    ValidIssuer = jwtSettings["Issuer"],
+                    ValidateAudience = true,
+                    ValidAudience = jwtSettings["Audience"],
+                    ValidateLifetime = false, 
+                    ClockSkew = TimeSpan.Zero
+                };
+
+                var principal = tokenHandler.ValidateToken(token, validationParameters, out var validatedToken);
+                
+                var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdClaim))
+                    throw new Exception("Invalid token");
+
+                var userId = int.Parse(userIdClaim);
+                var user = await _context.Users.FindAsync(userId);
+                
+                if (user == null || user.IsBlocked)
+                    throw new Exception("User not found or blocked");
+
+                var newToken = GenerateJwtToken(user);
+                
+                await _securityLog.LogAsync(user.Id, "TOKEN_REFRESH", "JWT token refreshed", GetIpAddress());
+
+                return new AuthResponseDto 
+                { 
+                    Token = newToken, 
+                    User = MapToDto(user) 
+                };
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Token refresh failed: " + ex.Message);
+            }
+        }
+
+        public async Task<AuthResponseDto> RefreshToken()
+        {
+            var context = _httpContextAccessor.HttpContext;
+            if (context == null) 
+                throw new Exception("No HTTP context available");
+
+            var userIdClaim = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim))
+                throw new Exception("Invalid token");
+
+            var userId = int.Parse(userIdClaim);
+            var user = await _context.Users.FindAsync(userId);
+            
+            if (user == null || user.IsBlocked)
+                throw new Exception("User not found or blocked");
+
+            var newToken = GenerateJwtToken(user);
+            
+            await _securityLog.LogAsync(user.Id, "TOKEN_REFRESH", "JWT token refreshed", GetIpAddress());
+
+            return new AuthResponseDto 
+            { 
+                Token = newToken, 
+                User = MapToDto(user) 
+            };
+        }
+        
         private UserDto MapToDto(User user)
         {
             return new UserDto
@@ -311,6 +395,23 @@ namespace FinoBankApi.Services
                 Is2faEnabled = !string.IsNullOrEmpty(user.TwoFactorSecret),
                 Role = user.Role
             };
+        }
+
+        private string GenerateSecureCode(int length)
+        {
+            using (var rng = System.Security.Cryptography.RandomNumberGenerator.Create())
+            {
+                var bytes = new byte[length * 4]; 
+                rng.GetBytes(bytes);
+                var result = new System.Text.StringBuilder(length);
+                
+                for (int i = 0; i < length; i++)
+                {
+                    var value = BitConverter.ToUInt32(bytes, i * 4);
+                    result.Append(value % 10);
+                }
+                return result.ToString();
+            }
         }
 
         public async Task UpdateUserProfile(int userId, UpdateProfileDto dto)

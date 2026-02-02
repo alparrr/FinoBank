@@ -8,6 +8,7 @@ using Microsoft.OpenApi.Models;
 using QuestPDF.Infrastructure;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,6 +47,14 @@ builder.Services.AddSwaggerGen(c =>
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<BankingDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.ConfigureHttpsDefaults(httpsOptions =>
+    {
+        httpsOptions.SslProtocols = System.Security.Authentication.SslProtocols.Tls13;
+    });
+});
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -112,6 +121,24 @@ builder.Services.AddRateLimiter(options =>
                 Window = TimeSpan.FromMinutes(1), 
                 QueueLimit = 0
             }));
+
+    options.AddPolicy("TransferPolicy", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "anonymous",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1)
+            }));
+            
+    options.AddPolicy("CardPolicy", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "anonymous",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(5)
+            }));
 });
 
 var app = builder.Build();
@@ -130,7 +157,10 @@ else
 app.UseMiddleware<FinoBankApi.Middleware.ErrorHandlingMiddleware>();
 app.UseMiddleware<FinoBankApi.Middleware.SecurityHeadersMiddleware>();
 
-//app.UseHttpsRedirection(); 
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 
 app.UseCors(policy => 
@@ -139,10 +169,12 @@ app.UseCors(policy =>
           .AllowAnyHeader()
           .AllowCredentials());
 
-app.UseRateLimiter();
+
 
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
+
 app.MapControllers();
 
 app.Run();

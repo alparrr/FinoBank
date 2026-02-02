@@ -12,7 +12,7 @@ namespace FinoBankApi.Models
         public string PhoneNumber { get; set; }
         
         [Required]
-        [MaxLength(6)]
+        [MaxLength(100)]
         public string Code { get; set; } 
         
         public DateTime ExpiryDate { get; set; }

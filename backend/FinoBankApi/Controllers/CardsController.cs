@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using FinoBankApi.DTOs;
 using FinoBankApi.Services;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace FinoBankApi.Controllers
 {
@@ -27,6 +28,7 @@ namespace FinoBankApi.Controllers
             return Ok(cards);
         }
 
+        [EnableRateLimiting("CardPolicy")]
         [HttpPost("create/{accountId}")]
         public async Task<IActionResult> CreateCard(int accountId, [FromBody] CreateCardRequest request)
         {

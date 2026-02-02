@@ -24,6 +24,8 @@ namespace FinoBankApi.Helpers
             using (Aes aes = Aes.Create())
             {
                 aes.Key = Encoding.UTF8.GetBytes(_key);
+                aes.Mode = CipherMode.CBC;
+                aes.Padding = PaddingMode.PKCS7;
                 aes.GenerateIV();
 
                 ICryptoTransform encryptor = aes.CreateEncryptor(aes.Key, aes.IV);

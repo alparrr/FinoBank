@@ -1,29 +1,33 @@
 import { useState } from "react";
 import useAuth from "../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
+import toast from "react-hot-toast";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [show2FA, setShow2FA] = useState(false);
-  const [error, setError] = useState(null);
   
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
+    const loadingToast = toast.loading("Logowanie...");
     try {
       await login(email, password, twoFactorCode);
+      toast.dismiss(loadingToast);
+      toast.success("Zalogowano pomyślnie");
       navigate("/");
     } catch (err) {
+      toast.dismiss(loadingToast);
       if (err.message === "2FA_REQUIRED") {
         setShow2FA(true);
+        toast("Podaj kod 2FA", { icon: "🔐" });
       } else {
         const errorMsg = err.response?.data?.error || err.response?.data?.message || "Błąd logowania";
-        setError(errorMsg);
+        toast.error(errorMsg);
       }
     }
   };
@@ -33,8 +37,6 @@ const Login = () => {
       <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg">
         <h2 className="mb-6 text-center text-2xl font-bold text-bank-blue">Logowanie do FinoBank</h2>
         
-        {error && <div className="mb-4 rounded bg-red-100 p-3 text-red-700 text-sm">{error}</div>}
-
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">Email</label>

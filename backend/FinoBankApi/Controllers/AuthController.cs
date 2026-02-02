@@ -62,6 +62,7 @@ namespace FinoBankApi.Controllers
         }
 
         [HttpPost("change-phone/request")]
+        [EnableRateLimiting("LoginPolicy")]
         [Authorize]
         public async Task<IActionResult> RequestPhoneChange([FromBody] ConfirmPhoneChangeDto dto)
         {
@@ -89,6 +90,28 @@ namespace FinoBankApi.Controllers
             return Ok(new { message = "Profile updated successfully" });
         }
 
+
+        [HttpPost("refresh")]
+        public async Task<IActionResult> RefreshToken()
+        {
+            try
+            {
+                var token = Request.Cookies["jwt"];
+                
+                if (string.IsNullOrEmpty(token))
+                    return Unauthorized(new { message = "No token found" });
+
+                var result = await _authService.RefreshTokenFromCookie(token);
+                SetTokenCookie(result.Token);
+                return Ok(new { message = "Token refreshed", user = result.User });
+            }
+            catch (Exception ex)
+            {
+                Response.Cookies.Delete("jwt");
+                return Unauthorized(new { message = ex.Message });
+            }
+        }
+
         [HttpPost("logout")]
         public IActionResult Logout()
         {
@@ -98,12 +121,14 @@ namespace FinoBankApi.Controllers
 
         private void SetTokenCookie(string token)
         {
+            var isHttps = Request.IsHttps;
+
             var cookieOptions = new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true,  
-                SameSite = SameSiteMode.None, 
-                Expires = DateTime.UtcNow.AddMinutes(60)
+                Secure = isHttps, 
+                SameSite = isHttps ? SameSiteMode.None : SameSiteMode.Lax,
+                Expires = DateTime.UtcNow.AddDays(7)
             };
 
             Response.Cookies.Append("jwt", token, cookieOptions);

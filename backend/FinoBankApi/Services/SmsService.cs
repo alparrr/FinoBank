@@ -12,10 +12,7 @@ namespace FinoBankApi.Services
         public Task SendVerificationCode(string phoneNumber, string code)
         {
             
-            _logger.LogInformation("================================================");
-            _logger.LogInformation($"[SMS GATEWAY] To: {phoneNumber} | Code: {code}");
-            _logger.LogInformation("================================================");
-            
+            _logger.LogInformation("SMS_SENT To:{PhoneNumber} Code:{Code}", phoneNumber, code);
             return Task.CompletedTask;
         }
     }

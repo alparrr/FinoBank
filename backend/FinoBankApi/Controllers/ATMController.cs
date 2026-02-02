@@ -2,18 +2,23 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FinoBankApi.Data;
 using FinoBankApi.Models;
+using Microsoft.AspNetCore.Authorization;
+using FinoBankApi.Services;
 
 namespace FinoBankApi.Controllers
 {
     [ApiController]
     [Route("api/atm")]
+    [Authorize(Roles = "Admin,Atm")]
     public class AtmController : ControllerBase
     {
         private readonly BankingDbContext _context;
+        private readonly ISecurityLogService _securityLog;
 
-        public AtmController(BankingDbContext context)
+        public AtmController(BankingDbContext context, ISecurityLogService securityLog)
         {
             _context = context;
+            _securityLog = securityLog;
         }
 
         public class AtmDepositRequest
@@ -25,7 +30,12 @@ namespace FinoBankApi.Controllers
         [HttpPost("deposit")]
         public async Task<IActionResult> Deposit([FromBody] AtmDepositRequest request)
         {
-            if (request.Amount <= 0) return BadRequest("Invalid amount");
+        if (request.Amount <= 0 || request.Amount > 10000) 
+            return BadRequest("Invalid amount");
+            
+            await _securityLog.LogAsync(null, "ATM_DEPOSIT", 
+            $"Deposit {request.Amount} to {request.AccountNumber}", 
+            HttpContext.Connection.RemoteIpAddress?.ToString());
 
             var account = await _context.Accounts
                 .FirstOrDefaultAsync(a => a.AccountNumber == request.AccountNumber);

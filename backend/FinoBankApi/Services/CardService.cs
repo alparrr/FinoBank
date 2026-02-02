@@ -3,6 +3,7 @@ using FinoBankApi.Data;
 using FinoBankApi.DTOs;
 using FinoBankApi.Models;
 using FinoBankApi.Helpers;
+using System.Security.Cryptography;
 
 namespace FinoBankApi.Services
 {
@@ -15,7 +16,7 @@ namespace FinoBankApi.Services
             _context = context;
         }
 
-        public async Task<Card> CreateCardForAccount(int accountId, int userId, string pin) // <--- Dodano parametr pin
+        public async Task<Card> CreateCardForAccount(int accountId, int userId, string pin)
         {
             var account = await _context.Accounts.FirstOrDefaultAsync(a => a.Id == accountId && a.UserId == userId);
             if (account == null) throw new Exception("Account not found");
@@ -31,7 +32,7 @@ namespace FinoBankApi.Services
             {
                 AccountId = accountId,
                 CardNumber = "4" + GenerateRandomDigits(15),
-                CVV = GenerateRandomDigits(3),
+                CVV = BCrypt.Net.BCrypt.HashPassword(GenerateRandomDigits(3)),
                 PIN = BCrypt.Net.BCrypt.HashPassword(pin),
                 ExpiryDate = DateTime.UtcNow.AddYears(3),
                 IsActive = true,
@@ -90,10 +91,22 @@ namespace FinoBankApi.Services
 
         private string GenerateRandomDigits(int length)
         {
-            var random = new Random();
-            string result = "";
-            for (int i = 0; i < length; i++) result += random.Next(0, 10).ToString();
-            return result;
+            const string chars = "0123456789";
+            var result = new char[length];
+            var data = new byte[length];
+
+            using (var rng = RandomNumberGenerator.Create())
+            {
+                rng.GetBytes(data);
+            }
+
+            for (int i = 0; i < length; i++)
+            {
+                var rnd = data[i] % chars.Length;
+                result[i] = chars[rnd];
+            }
+
+            return new string(result);
         }
     }
 }

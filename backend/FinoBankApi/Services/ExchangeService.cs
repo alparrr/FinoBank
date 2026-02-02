@@ -26,7 +26,7 @@ namespace FinoBankApi.Services
 
         public async Task UpdateRatesFromNbp()
         {
-            var response = await _httpClient.GetAsync("http://api.nbp.pl/api/exchangerates/tables/A?format=json");
+            var response = await _httpClient.GetAsync("https://api.nbp.pl/api/exchangerates/tables/A?format=json");
             
             if (!response.IsSuccessStatusCode) return;
 
@@ -57,10 +57,16 @@ namespace FinoBankApi.Services
 
         public async Task<List<CurrencyRate>> GetCurrentRates()
         {
-            if (!await _context.CurrencyRates.AnyAsync())
+            var lastUpdate = await _context.CurrencyRates
+            .OrderByDescending(r => r.Date)
+            .Select(r => r.Date)
+            .FirstOrDefaultAsync();
+        
+            if (lastUpdate == default || DateTime.UtcNow - lastUpdate > TimeSpan.FromHours(1))
             {
                 await UpdateRatesFromNbp();
             }
+            
             return await _context.CurrencyRates.ToListAsync();
         }
 

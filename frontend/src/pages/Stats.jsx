@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo } from "react";
 import axiosClient from "../api/axios";
 import Navbar from "../components/Navbar";
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import toast from "react-hot-toast";
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', '#FF4560', '#775DD0'];
 
@@ -29,6 +30,7 @@ const Stats = () => {
       }
     } catch (error) {
       console.error(error);
+      toast.error("Nie udało się pobrać statystyk.");
     } finally {
       setLoading(false);
     }
@@ -70,7 +72,7 @@ const Stats = () => {
       <Navbar />
       <div className="container mx-auto p-6">
         <h2 className="mb-6 text-2xl font-bold text-bank-blue flex items-center gap-2">
-            📊 Analiza Wydatków
+            Analiza Wydatków
         </h2>
 
         <div className="bg-white p-4 rounded-xl shadow-md mb-6 flex flex-wrap gap-4 items-end">

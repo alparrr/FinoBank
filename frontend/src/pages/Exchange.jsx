@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axiosClient from "../api/axios";
 import Navbar from "../components/Navbar";
+import toast from "react-hot-toast";
 
 const Exchange = () => {
   const [rates, setRates] = useState([]);
@@ -43,10 +44,10 @@ const Exchange = () => {
             toAccountId: Number(toAccountId),
             amount: Number(amount)
         });
-        alert("Wymiana zakończona sukcesem!");
+        toast.success("Wymiana zakończona sukcesem!");
         setAmount("");
     } catch (err) {
-        alert("Błąd wymiany: " + (err.response?.data?.message || err.message));
+        toast.error("Błąd wymiany: " + (err.response?.data?.message || err.message));
     }
   };
 
@@ -60,7 +61,6 @@ const Exchange = () => {
 
         <div className="grid gap-6 md:grid-cols-2">
             
-            {/* Tabela Kursów */}
             <div className="bg-white p-6 rounded-xl shadow-md">
                 <h3 className="text-lg font-bold mb-4 text-gray-700">Aktualne kursy (NBP)</h3>
                 <table className="w-full text-left">
@@ -82,7 +82,6 @@ const Exchange = () => {
                 <p className="mt-4 text-xs text-gray-400">Kursy pobierane automatycznie z API NBP.</p>
             </div>
 
-            {/* Formularz Wymiany */}
             <div className="bg-white p-6 rounded-xl shadow-md">
                 <h3 className="text-lg font-bold mb-4 text-gray-700">Wymień walutę</h3>
                 

@@ -47,7 +47,8 @@ namespace FinoBankApi.Controllers
             if (user == null) return NotFound();
 
             var result = new {
-                user.Id, user.FirstName, user.LastName, user.Email, user.IsBlocked, user.TwoFactorSecret, 
+                user.Id, user.FirstName, user.LastName, user.Email, user.IsBlocked,
+                Has2FA = !string.IsNullOrEmpty(user.TwoFactorSecret), 
                 Accounts = user.Accounts.Select(a => new {
                     a.Id, a.AccountNumber, a.Balance, a.Currency,
                     Cards = a.Cards?.Select(c => new { c.CardNumber, c.IsActive })

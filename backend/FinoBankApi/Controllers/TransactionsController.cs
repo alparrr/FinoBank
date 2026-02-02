@@ -5,6 +5,7 @@ using FinoBankApi.DTOs;
 using FinoBankApi.Services;
 using Microsoft.EntityFrameworkCore;
 using FinoBankApi.Data;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace FinoBankApi.Controllers
 {
@@ -25,6 +26,7 @@ namespace FinoBankApi.Controllers
 
         private int GetUserId() => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
+        [EnableRateLimiting("TransferPolicy")]
         [HttpPost]
         public async Task<IActionResult> CreateTransaction([FromBody] CreateTransactionDto createTransactionDto)
         {

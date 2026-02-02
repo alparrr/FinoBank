@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axiosClient from "../api/axios";
 import Navbar from "../components/Navbar";
+import toast from 'react-hot-toast';
 
 const Profile = () => {
   const [profile, setProfile] = useState(null);
@@ -16,8 +17,8 @@ const Profile = () => {
 
   const [setupData, setSetupData] = useState(null);
   const [code, setCode] = useState("");
-  const [message, setMessage] = useState(null);
-  const [error, setError] = useState(null);
+  
+  const [showPesel, setShowPesel] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -33,7 +34,7 @@ const Profile = () => {
           zipCode: data.zipCode
       });
     } catch (err) {
-      console.error(err);
+      toast.error("Nie udało się pobrać profilu.");
     } finally {
       setLoading(false);
     }
@@ -41,70 +42,105 @@ const Profile = () => {
 
   const handleUpdateProfile = async (e) => {
       e.preventDefault();
+      const loadingToast = toast.loading("Aktualizacja danych...");
+      
       try {
           await axiosClient.post("/auth/update-profile", editForm);
-          alert("Dane adresowe zostały zaktualizowane.");
+          toast.dismiss(loadingToast);
+          toast.success("Dane adresowe zostały zaktualizowane.");
           setIsEditing(false);
           fetchProfile();
       } catch (err) {
-          alert("Błąd aktualizacji: " + (err.response?.data?.message || err.message));
+          toast.dismiss(loadingToast);
+          toast.error("Błąd aktualizacji: " + (err.response?.data?.message || err.message));
       }
   };
 
   const handleRequestPhoneChange = async (e) => {
       e.preventDefault();
+      
+      if (!/^\d{9}$/.test(newPhoneNumber)) {
+          toast.error("Numer telefonu musi składać się z 9 cyfr.");
+          return;
+      }
+
+      const loadingToast = toast.loading("Wysyłanie kodu SMS...");
       try {
           await axiosClient.post("/auth/change-phone/request", {
               newPhoneNumber: newPhoneNumber,
               code: "000000" 
           });
-          alert(`Kod SMS został wysłany na numer ${newPhoneNumber}. Sprawdź logi backendu.`);
+          toast.dismiss(loadingToast);
+          toast.success(`Kod SMS wysłany na numer ${newPhoneNumber}.`);
           setPhoneStep(2);
       } catch(err) {
-          alert("Błąd: " + (err.response?.data?.message || "Sprawdź poprawność numeru (9 cyfr)"));
+          toast.dismiss(loadingToast);
+          
+          const serverMessage = err.response?.data?.message;
+
+          if (serverMessage === "This phone number is already in use.") {
+              toast.error("Ten numer telefonu jest już zajęty.");
+          } else {
+              toast.error(serverMessage || "Wystąpił błąd. Sprawdź poprawność numeru.");
+          }
       }
   };
 
   const handleConfirmPhoneChange = async (e) => {
       e.preventDefault();
+      const loadingToast = toast.loading("Weryfikacja kodu...");
+      
       try {
           await axiosClient.post("/auth/change-phone/confirm", {
               newPhoneNumber: newPhoneNumber,
               code: smsCode
           });
-          alert("Numer telefonu został zmieniony pomyślnie!");
+          toast.dismiss(loadingToast);
+          toast.success("Numer telefonu został zmieniony pomyślnie!");
+          
           setIsPhoneModalOpen(false);
           setPhoneStep(1);
           setNewPhoneNumber("");
           setSmsCode("");
           fetchProfile(); 
       } catch(err) {
-          alert("Błąd: " + (err.response?.data?.message || "Nieprawidłowy kod SMS"));
+          toast.dismiss(loadingToast);
+          toast.error("Błąd: " + (err.response?.data?.message || "Nieprawidłowy kod SMS"));
       }
   };
 
   const start2FASetup = async () => {
+    const loadingToast = toast.loading("Generowanie klucza...");
     try {
       const { data } = await axiosClient.get("/2fa/setup");
       setSetupData(data); 
-      setMessage(null);
-      setError(null);
+      toast.dismiss(loadingToast);
     } catch (err) {
-      setError("Nie udało się rozpocząć konfiguracji 2FA.");
+      toast.dismiss(loadingToast);
+      toast.error("Nie udało się rozpocząć konfiguracji 2FA.");
     }
   };
 
   const enable2FA = async () => {
+    if (!code || code.length !== 6) {
+        toast.error("Kod musi mieć 6 cyfr.");
+        return;
+    }
+
+    const loadingToast = toast.loading("Weryfikacja...");
     try {
       await axiosClient.post("/2fa/enable", {
         secretKey: setupData.secretKey,
         code: code
       });
-      setMessage("Uwierzytelnianie dwuetapowe zostało włączone!");
+      toast.dismiss(loadingToast);
+      toast.success("Uwierzytelnianie dwuetapowe zostało włączone!");
       setSetupData(null);
+      setCode("");
       fetchProfile();
     } catch (err) {
-      setError("Nieprawidłowy kod. Spróbuj ponownie.");
+      toast.dismiss(loadingToast);
+      toast.error("Nieprawidłowy kod. Spróbuj ponownie.");
     }
   };
 
@@ -117,11 +153,10 @@ const Profile = () => {
       <main className="container mx-auto p-6">
         <div className="mx-auto max-w-4xl space-y-6">
           
-          {/* DANE OSOBOWE */}
           <div className="rounded-xl bg-white p-6 shadow-md">
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold text-bank-blue flex items-center gap-2">
-                👤 Twoje Dane Osobowe
+                Twoje Dane Osobowe
                 </h2>
                 <button 
                     onClick={() => setIsEditing(!isEditing)}
@@ -133,7 +168,6 @@ const Profile = () => {
 
             {isEditing ? (
                 <form onSubmit={handleUpdateProfile} className="space-y-4 bg-blue-50 p-4 rounded-lg">
-                    {/* Formularz edycji adresu (bez zmian) */}
                     <div className="grid md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium">Ulica i numer</label>
@@ -162,10 +196,19 @@ const Profile = () => {
                     </div>
                     <div>
                         <label className="text-sm text-gray-500">PESEL</label>
-                        <div className="font-mono bg-yellow-50 p-1 inline-block rounded border border-yellow-200 text-yellow-800">{profile?.pesel}</div>
+                        <div className="flex items-center gap-2">
+                            <div className="font-mono bg-yellow-50 p-1 inline-block rounded border border-yellow-200 text-yellow-800">
+                                {showPesel ? profile?.pesel : "***********"}
+                            </div>
+                            <button 
+                                onClick={() => setShowPesel(!showPesel)}
+                                className="text-xs text-blue-600"
+                            >
+                                {showPesel ? "Ukryj" : "Pokaż"}
+                            </button>
+                        </div>
                     </div>
                     
-                    {/* SEKCJA TELEFONU ZE ZMIANĄ */}
                     <div className="flex justify-between items-start md:block">
                         <div>
                             <label className="text-sm text-gray-500">Telefon</label>
@@ -187,20 +230,16 @@ const Profile = () => {
             )}
           </div>
 
-          {/* KARTA 2FA (Bez zmian) */}
           <div className="rounded-xl bg-white p-6 shadow-md">
-            <h2 className="mb-4 text-xl font-bold text-bank-blue flex items-center gap-2">🛡️ Bezpieczeństwo</h2>
-            {message && <div className="mb-4 rounded bg-green-100 p-3 text-green-700">{message}</div>}
-            {error && <div className="mb-4 rounded bg-red-100 p-3 text-red-700">{error}</div>}
-
+            <h2 className="mb-4 text-xl font-bold text-bank-blue flex items-center gap-2">Bezpieczeństwo</h2>
+            
             {profile?.is2faEnabled ? (
               <div className="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 p-4 text-green-800">
-                <span className="text-2xl">✅</span>
                 <div><strong>2FA jest aktywne</strong><p className="text-sm">Konto zabezpieczone.</p></div>
               </div>
             ) : (
               <div>
-                <div className="mb-4 rounded-lg border border-orange-200 bg-orange-50 p-4 text-orange-800">⚠️ <strong>2FA nie jest aktywne.</strong></div>
+                <div className="mb-4 rounded-lg border border-orange-200 bg-orange-50 p-4 text-orange-800"><strong>2FA nie jest aktywne.</strong></div>
                 {!setupData ? (
                   <button onClick={start2FASetup} className="rounded bg-bank-blue px-4 py-2 text-white hover:bg-bank-dark transition">Konfiguruj 2FA</button>
                 ) : (
@@ -220,7 +259,6 @@ const Profile = () => {
         </div>
       </main>
 
-      {/* MODAL ZMIANY TELEFONU */}
       {isPhoneModalOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
@@ -250,7 +288,7 @@ const Profile = () => {
                       <form onSubmit={handleConfirmPhoneChange} className="space-y-4">
                           <p className="text-sm text-gray-600">Kod SMS został wysłany na numer <strong>{newPhoneNumber}</strong>.</p>
                           <div className="bg-yellow-50 border border-yellow-200 p-2 text-xs text-yellow-800 rounded">
-                              ℹ️ Sprawdź logi w konsoli backendu, aby odczytać kod.
+                              Sprawdź logi w konsoli backendu, aby odczytać kod.
                           </div>
                           <div>
                               <label className="block text-sm font-bold">Kod SMS</label>

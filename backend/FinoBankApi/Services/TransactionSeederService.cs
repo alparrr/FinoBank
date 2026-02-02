@@ -102,12 +102,12 @@ namespace FinoBankApi.Services
 
         private async Task<Account> EnsureSystemUserAndAccount()
         {
-            var systemUser = await _context.Users.FirstOrDefaultAsync(u => u.Id == 999);
+            var systemUser = await _context.Users
+                .FirstOrDefaultAsync(u => u.Email == "system@finobank.pl");
             
             if (systemUser == null)
             { systemUser = new User
                 {
-                    Id = 999, 
                     Email = "system@finobank.pl",
                     FirstName = "System",
                     LastName = "Rozliczeń",

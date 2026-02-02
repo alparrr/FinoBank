@@ -76,6 +76,10 @@
               "target": "Package",
               "version": "[9.0.10, )"
             },
+            "Otp.NET": {
+              "target": "Package",
+              "version": "[1.4.1, )"
+            },
             "Pomelo.EntityFrameworkCore.MySql": {
               "target": "Package",
               "version": "[9.0.0, )"

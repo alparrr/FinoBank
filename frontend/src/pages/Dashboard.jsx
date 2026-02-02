@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axiosClient from "../api/axios";
 import Navbar from "../components/Navbar";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 const Dashboard = () => {
   const [accounts, setAccounts] = useState([]);
@@ -49,7 +50,7 @@ const Dashboard = () => {
       link.click();
       link.parentNode.removeChild(link);
     } catch (error) {
-      alert("Nie udało się pobrać potwierdzenia.");
+      toast.error("Nie udało się pobrać potwierdzenia.");
     }
   };
 
@@ -60,11 +61,11 @@ const Dashboard = () => {
             accountType: newAccountForm.accountType,
             currency: newAccountForm.currency
         });
-        alert(`Sukces! Utworzono konto ${newAccountForm.accountType} w ${newAccountForm.currency}.`);
+        toast.success(`Sukces! Utworzono konto ${newAccountForm.accountType} w ${newAccountForm.currency}.`);
         setIsModalOpen(false); 
         fetchData(); 
     } catch (err) {
-        alert("Błąd: " + (err.response?.data?.message || err.message));
+        toast.error("Błąd: " + (err.response?.data?.message || err.message));
     }
   };
 
@@ -107,7 +108,7 @@ const Dashboard = () => {
                 onClick={() => navigate("/transfer")}
                 className="rounded-lg bg-green-600 px-6 py-3 font-semibold text-white shadow hover:bg-green-700 transition flex items-center gap-2"
             >
-                <span>💸</span> Nowy Przelew
+                Nowy Przelew
             </button>
         </div>
 
@@ -139,7 +140,7 @@ const Dashboard = () => {
                       <td className="py-3 px-2 text-sm text-gray-500">
                         {t.transactionType === "Transfer" && t.toAccountId === 999 ? (
                             <span className="flex items-center gap-2 text-gray-700 font-medium">
-                                💳 Płatność Kartą
+                                Płatność Kartą
                             </span>
                         ) : t.transactionType === "Transfer" && t.toAccountId !== 0 ? (
                             `Do: ${t.toAccountNumber}`
@@ -161,12 +162,12 @@ const Dashboard = () => {
                           onClick={() => downloadPdf(t.id)}
                           className="rounded bg-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-300 transition"
                         >
-                          📄 PDF
+                          PDF
                         </button>
                       </td>
                     </tr>
                   ))}
-                </tbody>`
+                </tbody>
               </table>
             </div>
           )}

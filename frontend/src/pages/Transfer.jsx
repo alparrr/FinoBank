@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import axiosClient from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
+import toast from "react-hot-toast";
 
 const Transfer = () => {
   const navigate = useNavigate();
@@ -37,6 +38,7 @@ const Transfer = () => {
         }
       } catch (err) {
         setError("Nie udało się pobrać danych.");
+        toast.error("Nie udało się pobrać danych.");
       } finally {
         setLoading(false);
       }
@@ -52,41 +54,64 @@ const Transfer = () => {
     e.preventDefault();
     setError(null);
 
-    if (formData.amount <= 0) {
-      setError("Kwota musi być większa od zera.");
-      return;
+    const cleanAccountNumber = formData.toAccountNumber.replace(/\s/g, '');
+    if (!/^PL\d{26}$/.test(cleanAccountNumber)) {
+        toast.error("Numer konta musi być w formacie: PL + 26 cyfr");
+        return;
     }
+
+    if (formData.amount <= 0) {
+        toast.error("Kwota musi być większa od zera.");
+        return;
+    }
+
+    const loadingToast = toast.loading("Przetwarzanie przelewu...");
 
     try {
       await axiosClient.post("/transactions", {
         fromAccountId: Number(formData.fromAccountId),
-        toAccountNumber: formData.toAccountNumber,
+        toAccountNumber: cleanAccountNumber,
         amount: Number(formData.amount),
         title: formData.title,
         description: formData.description,
       });
 
-      alert("Przelew wysłany pomyślnie!");
+      toast.dismiss(loadingToast);
+      toast.success(`Przelew na kwotę ${formData.amount} PLN wysłany pomyślnie!`);
       navigate("/"); 
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.error || "Błąd wysyłania przelewu");
+      toast.dismiss(loadingToast);
+      const errorMsg = err.response?.data?.message || err.response?.data?.error || "Błąd wysyłania przelewu";
+      toast.error(errorMsg);
+      setError(errorMsg);
     }
   };
 
-  // --- OBSŁUGA KONTAKTÓW ---
   const handleAddContact = async (e) => {
       e.preventDefault();
+      
+      let finalAccountNumber = newContactAccount.replace(/\s/g, '').toUpperCase();
+
+      if (!finalAccountNumber.startsWith('PL')) {
+          finalAccountNumber = 'PL' + finalAccountNumber;
+      }
+
+      if (!/^PL\d{26}$/.test(finalAccountNumber)) {
+        toast.error("Numer musi mieć format PL + 26 cyfr");
+        return;
+      }
+
       try {
           const { data } = await axiosClient.post("/contacts", {
               name: newContactName,
-              accountNumber: newContactAccount
+              accountNumber: finalAccountNumber 
           });
           setContacts([...contacts, data]); 
           setNewContactName("");
           setNewContactAccount("");
-          alert("Dodano nowego odbiorcę!");
+          toast.success("Dodano nowego odbiorcę!");
       } catch(err) {
-          alert("Błąd dodawania kontaktu: " + (err.response?.data?.message || err.message));
+          toast.error(err.response?.data || "Błąd dodawania kontaktu");
       }
   };
 

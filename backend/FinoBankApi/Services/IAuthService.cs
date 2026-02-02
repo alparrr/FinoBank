@@ -6,6 +6,8 @@ namespace FinoBankApi.Services
     {
         Task<AuthResponseDto> Register(RegisterDto registerDto);
         Task<AuthResponseDto> Login(LoginDto loginDto);
+        Task<AuthResponseDto> RefreshTokenFromCookie(string token);
+        Task<AuthResponseDto> RefreshToken();
 
         Setup2faDto GenerateTwoFactorSetup(string email);
         Task EnableTwoFactor(int userId, string secretKey, string code);

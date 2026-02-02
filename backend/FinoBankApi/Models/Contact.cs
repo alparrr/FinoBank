@@ -6,7 +6,13 @@ namespace FinoBankApi.Models
     {
         public int Id { get; set; }
         public int UserId { get; set; }
-        [Required] public string Name { get; set; }
-        [Required] public string AccountNumber { get; set; }
+        
+        [Required]
+        [MaxLength(100)] 
+        public string Name { get; set; }
+        
+        [Required] 
+        [MaxLength(28)]
+        public string AccountNumber { get; set; }
     }
 }

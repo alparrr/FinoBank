@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axiosClient from "../api/axios";
 import Navbar from "../components/Navbar";
+import toast from "react-hot-toast";
 
 const AdminPanel = () => {
   const [users, setUsers] = useState([]);
@@ -22,7 +23,7 @@ const AdminPanel = () => {
       setUsers(usersRes.data);
       setLogs(logsRes.data);
     } catch (err) {
-      alert("Brak dostępu. Tylko dla Administratora.");
+      toast.error("Brak dostępu. Tylko dla Administratora.");
     } finally {
       setLoading(false);
     }
@@ -32,9 +33,9 @@ const AdminPanel = () => {
     if(!confirm("Czy wygenerować 20 losowych transakcji dla tego usera?")) return;
     try {
         await axiosClient.post(`/admin/seed-transactions/${userId}`);
-        alert("Dane wygenerowane! Sprawdź wykresy na koncie użytkownika.");
+        toast.success("Dane wygenerowane! Sprawdź wykresy na koncie użytkownika.");
     } catch(err) {
-        alert("Błąd generowania: " + err.response?.data?.message);
+        toast.error("Błąd generowania: " + (err.response?.data?.message || err.message));
     }
 };
 
@@ -42,10 +43,10 @@ const AdminPanel = () => {
     const endpoint = isBlocked ? "unblock" : "block";
     try {
         await axiosClient.post(`/admin/users/${userId}/${endpoint}`);
-        alert(`Status użytkownika zmieniony.`);
+        toast.success(`Status użytkownika zmieniony.`);
         fetchData();
     } catch(err) {
-        alert("Błąd zmiany statusu.");
+        toast.error("Błąd zmiany statusu.");
     }
   };
 
@@ -55,7 +56,7 @@ const AdminPanel = () => {
           setSelectedUser(data);
           setIsModalOpen(true);
       } catch (err) {
-          alert("Nie udało się pobrać szczegółów.");
+          toast.error("Nie udało się pobrać szczegółów.");
       }
   };
 
@@ -66,10 +67,9 @@ const AdminPanel = () => {
       <Navbar />
       <div className="container mx-auto p-6">
         <h2 className="mb-6 text-2xl font-bold text-red-800 flex items-center gap-2">
-            🛡️ Panel Administratora
+            Panel Administratora
         </h2>
 
-        {/* Zakładki */}
         <div className="flex gap-4 mb-6">
             <button 
                 onClick={() => setActiveTab("users")}
@@ -106,8 +106,8 @@ const AdminPanel = () => {
                                 <td className="p-3"><span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">{u.role}</span></td>
                                 <td className="p-3">
                                     {u.isBlocked 
-                                        ? <span className="text-red-600 font-bold">ZABLOKOWANY</span> 
-                                        : <span className="text-green-600">Aktywny</span>}
+                                    ? <span className="text-red-600 font-bold">ZABLOKOWANY</span> 
+                                    : <span className="text-green-600">Aktywny</span>}
                                 </td>
                                 <td className="p-3">{u.accountCount}</td>
                                 <td className="p-3 flex gap-2">
@@ -124,7 +124,7 @@ const AdminPanel = () => {
                                         >
                                             {u.isBlocked ? "ODBLOKUJ" : "ZABLOKUJ"}
                                         </button>
-                                        
+                                    
                                     )}
                                 </td>
                             </tr>

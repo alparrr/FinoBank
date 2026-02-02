@@ -7,11 +7,16 @@ namespace FinoBankApi.Middleware
     {
         private readonly RequestDelegate _next;
         private readonly ILogger<ErrorHandlingMiddleware> _logger;
+        private readonly IWebHostEnvironment _env;
 
-        public ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandlingMiddleware> logger)
+        public ErrorHandlingMiddleware(
+            RequestDelegate next, 
+            ILogger<ErrorHandlingMiddleware> logger,
+            IWebHostEnvironment env)
         {
             _next = next;
             _logger = logger;
+            _env = env;
         }
 
         public async Task Invoke(HttpContext context)
@@ -55,8 +60,9 @@ namespace FinoBankApi.Middleware
                 
                 default:
                     statusCode = (int)HttpStatusCode.InternalServerError;
-                    message = "Internal Server Error";
-                    message = exception.Message; 
+                    message = _env.IsDevelopment()
+                        ? exception.Message 
+                        : "Internal Server Error";
                     break;
             }
 
@@ -65,7 +71,7 @@ namespace FinoBankApi.Middleware
             var errorResponse = new
             {
                 status = statusCode,
-                error = message,
+                message = message,
                 timestamp = DateTime.UtcNow
             };
 
