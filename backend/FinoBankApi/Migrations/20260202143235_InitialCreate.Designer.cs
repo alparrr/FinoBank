@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FinoBankApi.Migrations
 {
     [DbContext(typeof(BankingDbContext))]
-    [Migration("20260201192720_InitialCreate")]
+    [Migration("20260202143235_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -86,11 +86,6 @@ namespace FinoBankApi.Migrations
                     b.Property<int>("AccountId")
                         .HasColumnType("int");
 
-                    b.Property<string>("CVV")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("varchar(100)");
-
                     b.Property<string>("CardNumber")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -148,6 +143,8 @@ namespace FinoBankApi.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Contacts");
                 });
@@ -389,6 +386,17 @@ namespace FinoBankApi.Migrations
                         .IsRequired();
 
                     b.Navigation("Account");
+                });
+
+            modelBuilder.Entity("FinoBankApi.Models.Contact", b =>
+                {
+                    b.HasOne("FinoBankApi.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("FinoBankApi.Models.Transaction", b =>

@@ -35,4 +35,10 @@ namespace FinoBankApi.DTOs
         public string Status { get; set; }
         public string TransactionType { get; set; }
     }
+
+        public class CreateContactDto
+        {
+            public string Name { get; set; }
+            public string AccountNumber { get; set; }
+        }
 }

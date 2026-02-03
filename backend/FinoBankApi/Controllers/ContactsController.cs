@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using FinoBankApi.Data;
 using FinoBankApi.Models;
+using FinoBankApi.DTOs;
 
 namespace FinoBankApi.Controllers
 {
@@ -23,27 +24,31 @@ namespace FinoBankApi.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Contact contact)
+        public async Task<IActionResult> Create([FromBody] CreateContactDto dto)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
-            contact.UserId = userId;
             
-            var normalizedAccount = contact.AccountNumber.Replace(" ", "").ToUpper();
-
+            var normalizedAccount = dto.AccountNumber.Replace(" ", "").ToUpper(); // Używamy dto
             if (!normalizedAccount.StartsWith("PL"))
             {
                 normalizedAccount = "PL" + normalizedAccount;
             }
 
-            contact.AccountNumber = normalizedAccount;
-
-            if (!System.Text.RegularExpressions.Regex.IsMatch(contact.AccountNumber, @"^PL\d{26}$"))
+            if (!System.Text.RegularExpressions.Regex.IsMatch(normalizedAccount, @"^PL\d{26}$"))
             {
-                return BadRequest("Format must be PL followed by 26 digits");
+                return BadRequest(new { message = "Numer konta musi składać się z PL i 26 cyfr." });
             }
+            
+            var contact = new Contact
+            {
+                UserId = userId, 
+                Name = dto.Name,
+                AccountNumber = normalizedAccount
+            };
             
             _context.Contacts.Add(contact);
             await _context.SaveChangesAsync();
+            
             return Ok(contact);
         }
     }

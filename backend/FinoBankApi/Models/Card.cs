@@ -14,10 +14,6 @@ namespace FinoBankApi.Models
         
         [Required]
         [MaxLength(100)]
-        public string CVV { get; set; }
-        
-        [Required]
-        [MaxLength(100)]
         public string PIN { get; set; } 
         public DateTime ExpiryDate { get; set; }
         

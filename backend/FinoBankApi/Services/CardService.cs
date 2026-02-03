@@ -32,7 +32,6 @@ namespace FinoBankApi.Services
             {
                 AccountId = accountId,
                 CardNumber = "4" + GenerateRandomDigits(15),
-                CVV = BCrypt.Net.BCrypt.HashPassword(GenerateRandomDigits(3)),
                 PIN = BCrypt.Net.BCrypt.HashPassword(pin),
                 ExpiryDate = DateTime.UtcNow.AddYears(3),
                 IsActive = true,
